@@ -1,0 +1,11 @@
+spring.application.name=connections-service
+server.port=9030
+server.servlet.context-path=/connections
+
+# Neo4j Graph Database Configurations (Provide your local credentials here)
+spring.neo4j.uri=neo4j://127.0.0.1:7687
+spring.neo4j.authentication.username=your_neo4j_username
+spring.neo4j.authentication.password=your_neo4j_password
+
+eureka.client.service-url.defaultZone=http://localhost:8761/eureka
+eureka.instance.prefer-ip-address=true
