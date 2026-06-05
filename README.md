@@ -1,101 +1,160 @@
-# LinkedIn Microservices
+<div align="center">
 
-A backend system built with Java 21 and Spring Boot, modelling core LinkedIn features — user auth, posts, likes, and social graph connections — across independent microservices.
+# 🔗 LinkedIn Microservices
+
+**A backend system modelling core LinkedIn features — auth, posts, likes, and social graph connections — across independent microservices.**
+
+[![Java](https://img.shields.io/badge/Java-21-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0.6-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Spring Cloud](https://img.shields.io/badge/Spring_Cloud-Eureka-6DB33F?style=for-the-badge&logo=spring&logoColor=white)](https://spring.io/projects/spring-cloud)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-User%20%26%20Posts-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Neo4j](https://img.shields.io/badge/Neo4j-Connections-008CC1?style=for-the-badge&logo=neo4j&logoColor=white)](https://neo4j.com/)
+[![JWT](https://img.shields.io/badge/JWT-Auth-000000?style=for-the-badge&logo=json-web-tokens&logoColor=white)](https://jwt.io/)
+
+*Built to explore microservices patterns, graph databases, and JWT-based authentication in a real-world domain.*
+
+</div>
 
 ---
 
-## Architecture
+## 📐 Architecture Overview
 
 ```
-Client
-  └── API Gateway (port 8080)
-        ├── /api/v1/users/**       → UserService
-        ├── /api/v1/posts/**       → PostsService
-        └── /api/v1/connections/** → ConnectionsService
+  Client
+    │
+    ▼
+┌─────────────────────────────────────────────────────────┐
+│                    API Gateway  :8080                   │
+│              (Spring Cloud Gateway / WebFlux)           │
+│                                                         │
+│  /api/v1/users/**        ──►  UserService               │
+│  /api/v1/posts/**        ──►  PostsService              │
+│  /api/v1/connections/**  ──►  ConnectionsService        │
+└───────────┬─────────────────────────────────────────────┘
+            │  routes via client-side load balancing
+            ▼
+┌───────────────────────────────────────────────────────┐
+│              Discovery Server  :8761                  │
+│                 (Netflix Eureka)                      │
+│                                                       │
+│   UserService ──► registered                         │
+│   PostsService ──► registered                        │
+│   ConnectionsService ──► registered                  │
+└───────────────────────────────────────────────────────┘
 
-DiscoverServer (Eureka, port 8761)
-  └── All services register here for discovery & load balancing
+┌─────────────┐    ┌─────────────┐    ┌──────────────────┐
+│ UserService │    │PostsService │    │ConnectionsService│
+│   :user     │    │  :posts     │    │   :connections   │
+│             │    │             │    │                  │
+│  JWT + BCrypt    │ Posts+Likes │    │  Social Graph    │
+└──────┬──────┘    └──────┬──────┘    └────────┬─────────┘
+       │                  │                    │
+  ┌────▼────┐        ┌────▼────┐          ┌────▼────┐
+  │ PG DB   │        │ PG DB   │          │  Neo4j  │
+  └─────────┘        └─────────┘          └─────────┘
 ```
 
 ---
 
-## Services
+## 🏗️ Services
 
-### DiscoverServer
-Eureka service registry. Must be started first — all other services register with it on startup.
-
-### APIGateway
-Reactive gateway (Spring Cloud Gateway WebFlux) that routes incoming requests to the appropriate downstream service using client-side load balancing.
-
-### UserService
-Handles user registration and authentication.
-- **Database:** PostgreSQL
-- **Auth:** JWT (jjwt 0.12.6) + BCrypt password hashing
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/auth/signup` | Register a new user |
-| POST | `/auth/login` | Login and receive a JWT token |
-
-### PostsService
-Manages posts and likes.
-- **Database:** PostgreSQL
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/core` | Create a new post |
-| GET | `/core/{postId}` | Get a post by ID |
-| GET | `/core/users/{userId}/allPosts` | Get all posts by a user |
-| POST | `/likes/{postId}` | Like a post |
-| DELETE | `/likes/{postId}` | Unlike a post |
-
-### ConnectionsService
-Manages the social graph using a Neo4j graph database. `Person` nodes are connected via `CONNECTED_TO` relationships, enabling efficient graph traversal queries.
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/core/{userId}/first-degree` | Get first-degree connections of a user |
+| Service | Port | Description |
+|---|---|---|
+| 🌐 **API Gateway** | `8080` | Single entry point; reactive routing + client-side load balancing |
+| 🔍 **Discovery Server** | `8761` | Netflix Eureka — all services self-register here |
+| 👤 **User Service** | — | Registration, login, JWT auth + BCrypt password hashing |
+| 📝 **Posts Service** | — | Post creation, retrieval, likes and unlikes |
+| 🕸️ **Connections Service** | — | Social graph traversal via Neo4j (`CONNECTED_TO` relationships) |
 
 ---
 
-## Tech Stack
+## 📡 API Reference
 
-| Concern | Technology |
+### 👤 User Service — `/api/v1/users`
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/auth/signup` | Register a new user |
+| `POST` | `/auth/login` | Login and receive a JWT token |
+
+### 📝 Posts Service — `/api/v1/posts`
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/core` | Create a new post |
+| `GET` | `/core/{postId}` | Get a post by ID |
+| `GET` | `/core/users/{userId}/allPosts` | Get all posts by a user |
+| `POST` | `/likes/{postId}` | Like a post |
+| `DELETE` | `/likes/{postId}` | Unlike a post |
+
+### 🕸️ Connections Service — `/api/v1/connections`
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/core/{userId}/first-degree` | Get first-degree connections of a user |
+
+---
+
+## 💻 Tech Stack
+
+| Layer | Technology |
 |---|---|
 | Language | Java 21 |
 | Framework | Spring Boot 4.0.6 |
+| Gateway | Spring Cloud Gateway (Reactive / WebFlux) |
 | Service Discovery | Spring Cloud Netflix Eureka |
-| API Gateway | Spring Cloud Gateway (WebFlux) |
-| User & Posts DB | PostgreSQL (Spring Data JPA / Hibernate) |
-| Connections DB | Neo4j (Spring Data Neo4j) |
+| User & Posts DB | PostgreSQL — Spring Data JPA / Hibernate |
+| Connections DB | Neo4j — Spring Data Neo4j |
 | Authentication | JWT (jjwt 0.12.6) + BCrypt (jbcrypt 0.4) |
 | Object Mapping | ModelMapper 3.2.0 |
-| Boilerplate | Lombok |
-| Build Tool | Maven |
+| Build | Apache Maven |
+| Utilities | Lombok |
 
 ---
 
-## Getting Started
+## 📁 Project Structure
+
+```
+linkedin-microservices/
+├── DiscoverServer/          ← Eureka service registry        :8761
+├── APIGateway/              ← Spring Cloud Gateway           :8080
+├── userService/             ← Auth: signup, login, JWT
+├── postsService/            ← Posts and likes
+└── ConnectionsService/      ← Social graph (Neo4j)
+```
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-- Java 21
-- Maven
+
+- Java 21+
+- Maven 3.9+
 - PostgreSQL (for UserService and PostsService)
 - Neo4j (for ConnectionsService)
 
 ### Configuration
 
-Each service has an `application.properties.example` or `application.yml.example` in its `src/main/resources/` directory. Copy and rename it, then fill in your environment values:
+Each service has an `.example` config file in `src/main/resources/`. Copy and fill in your values:
 
 ```bash
-# Example for UserService
+# UserService
 cp userService/src/main/resources/application.properties.example \
    userService/src/main/resources/application.properties
+
+# PostsService
+cp postsService/src/main/resources/application.properties.example \
+   postsService/src/main/resources/application.properties
+
+# ConnectionsService
+cp ConnectionsService/src/main/resources/application.yml.example \
+   ConnectionsService/src/main/resources/application.yml
 ```
 
-Key values to configure:
+**Key values to configure:**
 
-| Service | Config Key | Description |
+| Service | Key | Description |
 |---|---|---|
 | UserService | `spring.datasource.url` | PostgreSQL connection URL |
 | UserService | `spring.datasource.username` / `password` | DB credentials |
@@ -105,49 +164,52 @@ Key values to configure:
 | ConnectionsService | `spring.neo4j.authentication.*` | Neo4j credentials |
 | All services | `eureka.client.service-url.defaultZone` | Eureka server URL |
 
-### Running the Services
-
-Start services in this order:
+### Boot Order
 
 ```bash
-# 1. Eureka Discovery Server
+# 1. Start Eureka first — all other services depend on it
 cd DiscoverServer && ./mvnw spring-boot:run
 
-# 2. API Gateway
+# 2. Start the API Gateway
 cd APIGateway && ./mvnw spring-boot:run
 
-# 3. Application services (order doesn't matter)
+# 3. Start application services (any order)
 cd userService && ./mvnw spring-boot:run
 cd postsService && ./mvnw spring-boot:run
 cd ConnectionsService && ./mvnw spring-boot:run
 ```
 
-All services will auto-register with Eureka. You can verify at `http://localhost:8761`.
+Verify all services registered at: **`http://localhost:8761`**
 
 ---
 
-## Project Structure
+## 🚧 Known Limitations
+
+This project is actively in progress. Current gaps:
+
+| Area | Status | Detail |
+|---|---|---|
+| JWT Propagation | ⏳ Pending | `getUserIdFromToken()` implemented but commented out; controllers hardcode `userId = 1L` |
+| Gateway Auth Filter | ⏳ Pending | API Gateway does not yet validate JWTs on incoming requests |
+| Connection Management | ⏳ Pending | No endpoints yet to create or remove connections — query only |
+| Like Notifications | ⏳ Pending | `TODO` placeholder exists for notifying post owners on likes |
+
+---
+
+## 🗺️ Graph Data Model
+
+ConnectionsService uses **Neo4j** to model the social graph:
 
 ```
-linkedin-microservices-main/
-├── DiscoverServer/          # Eureka service registry
-├── APIGateway/              # Spring Cloud Gateway
-├── userService/             # Auth: signup, login, JWT
-├── postsService/            # Posts and likes
-└── ConnectionsService/      # Social graph (Neo4j)
+(:Person {userId}) -[:CONNECTED_TO]-> (:Person {userId})
 ```
 
----
-
-## Known Limitations / Work in Progress
-
-- **User ID not extracted from JWT** — Services currently hardcode `userId = 1L`. The `JwtService.getUserIdFromToken()` method is implemented but commented out; it needs to be wired into controllers once JWT propagation via the gateway is in place.
-- **No auth filter at the gateway** — The API Gateway does not yet validate JWT tokens on incoming requests.
-- **No connection management endpoints** — `ConnectionsService` supports querying connections but has no API yet for creating or removing them.
-- **Notifications not implemented** — Post like events have a `TODO` placeholder for notifying the post owner.
+This enables efficient graph traversal queries — first-degree connections, mutual friends, and shortest paths — that would be costly in a relational model.
 
 ---
 
-## Author
+<div align="center">
 
-[shubhampdev7](https://github.com/shubhampdev7)
+Built by [shubhampdev7](https://github.com/shubhampdev7) as part of a backend engineering deep-dive into Java, Spring Boot, and Microservices Architecture.
+
+</div>
